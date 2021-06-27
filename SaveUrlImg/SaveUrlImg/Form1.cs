@@ -43,7 +43,7 @@ namespace SaveUrlImg
             }
 
             ck_SamePath.Checked = true;
-             
+
         }
         #region 一般功能
         /// <summary>
@@ -219,12 +219,14 @@ namespace SaveUrlImg
         #region 執行批量下載
         private void btn_LgDownLoad_Click(object sender, EventArgs e)
         {
+            set_enabled(false);
             string file = "";
             //檢查要下載的路徑
             if (string.IsNullOrEmpty(txt_LgURL.Text))
             {
                 lbl_LgMsg.Text = "請選擇匯入檔";
                 btn_LgPopUp.Focus();
+                set_enabled(true);
                 return;
             }
             else
@@ -236,6 +238,7 @@ namespace SaveUrlImg
             {
                 lbl_LgMsg.Text = "存檔路徑不可為空";
                 btn_LgFolder.Focus();
+                set_enabled(true);
                 return;
             }
 
@@ -254,6 +257,7 @@ namespace SaveUrlImg
                 string extension = System.IO.Path.GetExtension(basePath);
                 try
                 {
+                    int all_count = 0, now_count = 0;
                     FileStream fs = File.OpenRead(basePath);
                     if (extension.Equals(".xls"))
                     {
@@ -269,14 +273,22 @@ namespace SaveUrlImg
                     ISheet sheet = workbook.GetSheetAt(0);
                     IRow row_default = null; //儲存第一列為檔案命名
                     IRow row = null;
-
+                    all_count = sheet.LastRowNum;
                     string text = string.Empty;
                     for (int i = 0; i <= sheet.LastRowNum; i++)
                     {
                         row = sheet.GetRow(i);  //讀取當前行數據
 
+                        if (all_count < 0)
+                        {
+                            lbl_LgMsg.Text = DateTime.Now + "沒有偵測到行數" + lbl_LgMsg.Text;
+                            set_enabled(true);
+                            return;
+                        }
+
                         if (row != null)
                         {
+
                             #region 確認檔案格式是否符合 & 暫存第一列
                             if (i == 0)
                             {
@@ -286,19 +298,22 @@ namespace SaveUrlImg
                                 {
                                     if (row_default.GetCell(0).ToString() != "Path")
                                     {
-                                        lbl_LgMsg.Text = "Excel 檔案格式錯誤， A1應為Path";
+                                        lbl_LgMsg.Text = DateTime.Now + "Excel 檔案格式錯誤， A1應為Path" + lbl_LgMsg.Text;
+                                        set_enabled(true);
                                         return;
                                     }
 
                                     if (row_default.GetCell(1).ToString() != "資料夾名稱")
                                     {
-                                        lbl_LgMsg.Text = "Excel 檔案格式錯誤， B1應為資料夾名稱";
+                                        lbl_LgMsg.Text = DateTime.Now + "Excel 檔案格式錯誤， B1應為資料夾名稱" + lbl_LgMsg.Text;
+                                        set_enabled(true);
                                         return;
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    lbl_LgMsg.Text = "Excel 檔案格式錯誤， A1應為Path， B1應為資料夾名稱";
+                                    lbl_LgMsg.Text = DateTime.Now + "Excel 檔案格式錯誤， A1應為Path， B1應為資料夾名稱" + lbl_LgMsg.Text;
+                                    set_enabled(true);
                                     return;
                                 }
                             }
@@ -306,14 +321,16 @@ namespace SaveUrlImg
 
                             else
                             {
+                                now_count = i;
+                                lbl_LgMsg.Text = DateTime.Now + "下載進度(" + now_count + "/" + all_count + ")....開始"+"\r\n" + lbl_LgMsg.Text;                                
                                 //存檔位置 : samepath +  folder_path + folder_name
-                                string folder_path = ""; 
+                                string folder_path = "";
                                 string folder_name = "";
-                              
+
+
                                 //LastCellNum 是當前行的總列數
                                 for (int j = 0; j < row.LastCellNum; j++)
                                 {
-
                                     //第一個欄位[PATH]及第二個欄位[商品名稱]-->非URL
                                     #region 資料夾部分
                                     if (j == 0) //[folder]PATH
@@ -348,10 +365,10 @@ namespace SaveUrlImg
                                         string url = "";    //圖片的url
                                         string filetype = cb_LgFileType.Text;    //圖片的副檔名(.png / .jpeg)
                                         string newfilename = ""; //[file]//圖片存檔於您的電腦時的新名稱   ※需適時加副檔名          
-                                        string FilePath = txt_LgSavePath.Text + @"\" + folder_path + @"\" + folder_name + @"\" ;
+                                        string FilePath = txt_LgSavePath.Text + @"\" + folder_path + @"\" + folder_name + @"\";
 
                                         //存檔位置 : samepath + folder_path + folder_name
-                                        
+
                                         //若非空值
                                         if (row.GetCell(j) != null)
                                         {
@@ -360,16 +377,6 @@ namespace SaveUrlImg
                                             if (string.IsNullOrEmpty(value))
                                             {
                                                 continue;
-                                            }
-
-                                            //取得檔案名稱
-                                            if (row_default.GetCell(j) != null)
-                                            {
-                                                newfilename = row_default.GetCell(j).ToString() + filetype;
-                                            }
-                                            else
-                                            {
-                                               
                                             }
 
 
@@ -392,8 +399,20 @@ namespace SaveUrlImg
                                             }
 
                                             url = img_urlStr;
-                                            FilePath = FilePath + newfilename;
+
                                             #region 下載圖檔
+
+                                            //取得檔案名稱
+                                            if (row_default.GetCell(j) != null)
+                                            {
+                                                newfilename = row_default.GetCell(j).ToString() + filetype;
+                                            }
+                                            else
+                                            {
+
+                                            }
+
+                                            FilePath = FilePath + newfilename;
                                             WebClient WebPath = new WebClient();
                                             //if (File.Exists(FilePath))  //判別檔案是否存在於對應的路徑
                                             //{
@@ -410,30 +429,44 @@ namespace SaveUrlImg
                                             {
                                                 lbl_LgMsg.Text = "URL下載路徑有誤" + ex.ToString();
                                             }
-                                            #endregion
-                                            
+                                            #endregion 
                                         }
-
                                     }
                                     #endregion
                                 }
-                            } 
-                        } 
+                                lbl_LgMsg.Text = DateTime.Now + "下載進度(" + now_count + "/" + all_count + ")....結束" + "\r\n" + lbl_LgMsg.Text;
+                            }
+                        }
+
                     }
-                    lbl_LgMsg.Text = "下載完成";
+                    lbl_LgMsg.Text = DateTime.Now + "下載完成" + "\r\n" + lbl_LgMsg.Text;
                     lbl_LgMsg.ForeColor = Color.Green;
                 }
                 catch (Exception ex)
                 {
-                    lbl_LgMsg.Text = ex.ToString();
+                    lbl_LgMsg.Text = DateTime.Now + ex.ToString() + lbl_LgMsg.Text;
                 }
             }
-
             #endregion
-
+            set_enabled(true);
         }
-        #endregion
 
         #endregion
+
+
+        #region 控制btn
+        private void set_enabled(bool enable)
+        {
+            btn_LgDownLoad.Enabled = enable;
+            btn_LgClear.Enabled = enable;
+            btn_LgFolder.Enabled = enable;
+            btn_LgPopUp.Enabled = enable;
+            cb_LgFileType.Enabled = enable;
+            ck_SamePath.Enabled = enable;
+        }
+
+        #endregion
+        #endregion
+
     }
 }
