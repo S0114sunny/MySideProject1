@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -30,6 +31,7 @@ namespace SaveUrlImg
             lbl_LgMsg.ReadOnly = true;
             cb_FileType.Items.Add(".png");
             cb_FileType.Items.Add(".jpeg");
+            cb_FileType.Items.Add(".jpg");
             if (cb_FileType.Items.Count > 0)
             {
                 cb_FileType.SelectedIndex = 0;
@@ -37,6 +39,7 @@ namespace SaveUrlImg
 
             cb_LgFileType.Items.Add(".png");
             cb_LgFileType.Items.Add(".jpeg");
+            cb_LgFileType.Items.Add(".jpg");
             if (cb_LgFileType.Items.Count > 0)
             {
                 cb_LgFileType.SelectedIndex = 0;
@@ -128,23 +131,37 @@ namespace SaveUrlImg
             string NewFileName = txt_Rename.Text + cb_FileType.Text; //圖片存檔於您的電腦時的新名稱   ※需適時加副檔名          
             string FilePath = txt_SavePath.Text + @"\" + NewFileName;
 
-            if (File.Exists(FilePath))  //判別檔案是否存在於對應的路徑
+            //if (File.Exists(FilePath))  //判別檔案是否存在於對應的路徑
+            //{
+            //    lbl_Msg.Text = "檔名重複";
+            //    txt_Rename.Focus();
+            //    return;
+            //}
+
+            //try
+            //{
+            //    WebPath.DownloadFile(url, FilePath);
+            //    lbl_Msg.Text = "下載完成";
+            //    lbl_Msg.ForeColor = Color.Green;
+            //}
+            //catch (Exception ex)
+            //{
+            //    lbl_Msg.Text = "URL下載路徑有誤" + ex.ToString();
+            //}
+
+            //string url = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Breathe-face-smile.svg/1200px-Breathe-face-smile.svg.png";
+            //WebClient client = new WebClient();
+            Stream stream = WebPath.OpenRead(url);
+            Bitmap bitmap = new Bitmap(stream);
+
+            if (bitmap != null)
             {
-                lbl_Msg.Text = "檔名重複";
-                txt_Rename.Focus();
-                return;
+                bitmap.Save(FilePath, ImageFormat.Jpeg);
             }
 
-            try
-            {
-                WebPath.DownloadFile(url, FilePath);
-                lbl_Msg.Text = "下載完成";
-                lbl_Msg.ForeColor = Color.Green;
-            }
-            catch (Exception ex)
-            {
-                lbl_Msg.Text = "URL下載路徑有誤" + ex.ToString();
-            }
+            stream.Flush();
+            stream.Close();
+            WebPath.Dispose();
 
         }
         #endregion
